@@ -8,8 +8,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import mplfinance as mpf
+from etl import ler_arquivo_winfut
 
-data = pd.read_excel('data/winfut1min.xlsx')
+data = ler_arquivo_winfut('data/winfut1min.xlsx')
 
 # Convertendo para DataFrame
 df = pd.DataFrame(data)
@@ -124,4 +125,4 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-resultados_multiplos_dias.to_csv('data/resultado.csv')
+resultados_multiplos_dias.to_excel('data/resultado.xlsx')

@@ -1,0 +1,146 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import timedelta
+from etl import ler_arquivo_winfut, tranformacao_winfut
+
+df = ler_arquivo_winfut('data/winfut60min.xlsx')
+df = tranformacao_winfut(df)
+df_resultado = ler_arquivo_winfut('data/resultado.xlsx')
+
+#Título do Dash
+st.title('Dashboard para análise de modelos de trading')
+
+#Filter de data 
+st.sidebar.header('Filtro data winfut')
+start_date = st.sidebar.date_input('Data Inicio', df['Data'].min())
+end_date = st.sidebar.date_input('Data Final', df['Data'].max())
+
+# Filter data based on user input
+filtered_df = df[(df['Data'] >= pd.to_datetime(start_date)) & (df['Data'] <= pd.to_datetime(end_date))]
+
+# Show filtered data
+st.subheader('Filtered Data')
+st.write(filtered_df)
+
+# Plotting
+
+# Price over Time
+st.subheader('Price over Time')
+fig, ax = plt.subplots()
+ax.fill_between(filtered_df['Data'], filtered_df['Fechamento'], label='Fechamento', color='skyblue', alpha=0.4)
+ax.plot(filtered_df['Data'], filtered_df['Fechamento'], color='Slateblue', alpha=0.6)
+ax.set_xlabel('Data')
+ax.set_ylabel('Preço')
+ax.set_ylim(bottom=filtered_df['Fechamento'].min() * 0.9, top=filtered_df['Fechamento'].max() * 1.1)
+ax.grid(True)
+ax.legend()
+st.pyplot(fig)
+
+
+#Oscilation over Time and Median
+average_oscilation = filtered_df['Oscilacao'].mean()
+st.subheader('Oscilacao ao longo do tempo')
+fig, ax = plt.subplots()
+ax.plot(filtered_df['Data'], filtered_df['Oscilacao'], label='Oscilacao', color='green')
+ax.axhline(average_oscilation, color='blue', linestyle='--', label=f'Media Oscilacao: {average_oscilation:.2f}')
+ax.set_xlabel('Data')
+ax.set_ylabel('Oscilacao')
+ax.legend()
+st.pyplot(fig)
+
+
+#Function to filter the last five days in dataset 
+def filter_last_5_days_from_latest(df, date_column):
+    # Convert the date column to datetime format if it's not already
+    df[date_column] = pd.to_datetime(df[date_column])
+    # Find the most recent date in the dataset
+    latest_date = df[date_column].max()
+    # Calculate the date 5 days before the most recent date
+    five_days_ago = latest_date - timedelta(days=5)
+    # Filter DataFrame to include only the last 5 days
+    filtered_df = df[df[date_column] >= five_days_ago]
+    return filtered_df
+
+#Calculate average oscilattion last five days
+df_last_five_days = filter_last_5_days_from_latest(filtered_df, 'Data')
+avg_last_five_days_oscilation = df_last_five_days['Oscilacao'].mean()
+
+
+#Function to filter the last twenty days in dataset 
+def filter_last_twenty_days_from_latest(df, date_column):
+    # Convert the date column to datetime format if it's not already
+    df[date_column] = pd.to_datetime(df[date_column])
+    # Find the most recent date in the dataset
+    latest_date = df[date_column].max()
+    # Calculate the date 5 days before the most recent date
+    five_days_ago = latest_date - timedelta(days=20)
+    # Filter DataFrame to include only the last 20 days
+    filtered_df = df[df[date_column] >= five_days_ago]
+    return filtered_df
+
+#Calculate average oscilattion last twenty days
+df_last_twenty_days = filter_last_twenty_days_from_latest(filtered_df, 'Data')
+avg_last_twenty_days_oscilation = df_last_twenty_days['Oscilacao'].mean()
+
+
+#Function to filter the last sixty days in dataset 
+def filter_last_sixty_days_from_latest(df, date_column):
+    # Convert the date column to datetime format if it's not already
+    df[date_column] = pd.to_datetime(df[date_column])
+    # Find the most recent date in the dataset
+    latest_date = df[date_column].max()
+    # Calculate the date 5 days before the most recent date
+    five_days_ago = latest_date - timedelta(days=60)
+    # Filter DataFrame to include only the last 60 days
+    filtered_df = df[df[date_column] >= five_days_ago]
+    return filtered_df
+
+#Calculate average oscilattion last five days
+df_last_sixty_days = filter_last_sixty_days_from_latest(filtered_df, 'Data')
+avg_last_sixty_days_oscilation = df_last_sixty_days['Oscilacao'].mean()
+
+
+# Create a DataFrame for the averages
+averages = pd.DataFrame({
+    'Period': ['Last 5 Days', 'Last 20 Days', 'Last 60 Days'],
+    'Average Oscillation': [avg_last_five_days_oscilation, avg_last_twenty_days_oscilation, avg_last_sixty_days_oscilation]
+})
+
+# Plotting the bar chart
+st.title("Average Oscillation Over Different Periods")
+fig, ax = plt.subplots()
+bars = ax.bar(averages['Period'], averages['Average Oscillation'], color=['blue', 'green', 'red'])
+# Adding numbers on the bars
+for bar in bars:
+    yval = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width()/2, yval, round(yval, 2), ha='center', va='bottom')
+ax.set_xlabel('Period')
+ax.set_ylabel('Average Oscillation')
+ax.set_title('Average Oscillation Over Different Periods')
+st.pyplot(fig)
+
+
+# Histograma das Oscilações com Percentual
+st.subheader('Distribuição Percentual das Oscilações')
+fig, ax = plt.subplots()
+
+# Calcula o histograma e os valores dos bins
+n, bins, patches = ax.hist(filtered_df['Oscilacao'], bins=6, color='purple', alpha=0.7, edgecolor='black')
+
+# Converte os valores absolutos para percentuais
+n_percent = (n / n.sum()) * 100
+
+# Adiciona o percentual dentro de cada barra
+for i in range(len(patches)):
+    ax.text(patches[i].get_x() + patches[i].get_width() / 2, patches[i].get_height(),
+            f'{n_percent[i]:.2f}%', ha='center', va='bottom')
+
+ax.set_xlabel('Oscillation')
+ax.set_ylabel('Frequency (%)')
+ax.set_title('Histogram of Oscillations (6 Bins)')
+st.pyplot(fig)
+
+
+
