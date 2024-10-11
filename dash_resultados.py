@@ -20,7 +20,7 @@ df_filtered = df_resultado[(df_resultado['Dia'] >= pd.to_datetime(start_date)) &
                            (df_resultado['Dia'] <= pd.to_datetime(end_date))]
 
 # Show filtered data
-st.subheader('Df Filtrado')
+st.subheader('Resultados do Modelo Operacional')
 st.write(df_filtered)
 
 # Verificar se o DataFrame filtrado contém dados
@@ -34,7 +34,7 @@ else:
     ax.fill_between(df_filtered['Dia'], 
                     df_filtered['Resultado_Acumulado'], 
                     color='skyblue', alpha=0.4)
-    ax.plot(df_filtered['Dia'], df_filtered['Resultado_Acumulado'], color='Slateblue', alpha=0.6)
+    ax.plot(df_filtered['Dia'], df_filtered['Resultado_Acumulado'], color='blue', alpha=0.6)
     
     ax.set_title('Evolução Acumulada dos Resultados ao Longo do Tempo', fontsize=14)
     ax.set_xlabel('Tempo (Dia)', fontsize=12)

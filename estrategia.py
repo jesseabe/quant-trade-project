@@ -7,7 +7,6 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
-import mplfinance as mpf
 from etl import ler_arquivo_winfut
 
 data = ler_arquivo_winfut('data/winfut1min.xlsx')
@@ -21,16 +20,16 @@ df['Data'] = pd.to_datetime(df['Data'])
 def estrategia_trading(df):
     posicao = None  # Nenhuma posição inicialmente
     resultado_dia = 0  # Resultado do dia
-    maximo, minimo = None, None  # Máxima e mínima do candle
-    preco_entrada = 0  # Preço da entrada
+    preco_entrada = None  # Preço da entrada
     stop_count = 0  # Contagem de stops (até 3)
     alvo = 300  # Alvo de pontos
     stop = 150  # Stop de pontos
+    maximo, minimo = None, None  # Máxima e mínima para cada candle
 
     resultados = []  # Armazena os resultados por candle e, ao final do dia, será o resultado final
 
     for i, row in df.iterrows():
-        # Atualizar máxima e mínima
+        # Atualizar máxima e mínima para cada candle
         if maximo is None or row["Máxima"] > maximo:
             maximo = row["Máxima"]
         if minimo is None or row["Mínima"] < minimo:
@@ -46,13 +45,15 @@ def estrategia_trading(df):
                 elif row["Fechamento"] < row["Abertura"]:
                     posicao = "vendido"
                     preco_entrada = row["Fechamento"]
+
             else:
                 # Se estamos comprados
                 if posicao == "comprado":
                     if row["Fechamento"] >= preco_entrada + alvo:
+                        # Alvo atingido
                         resultado_dia += alvo * 0.2 * 5
                         resultados.append({"Candle": row["Data"], "Resultado": resultado_dia})
-                        break  # Encerrar posição ao atingir o alvo
+                        break  # Encerrar o dia ao atingir o alvo
                     elif row["Fechamento"] <= preco_entrada - stop:
                         # Inverter posição (stop 1)
                         stop_count += 1
@@ -66,9 +67,10 @@ def estrategia_trading(df):
                 # Se estamos vendidos
                 elif posicao == "vendido":
                     if row["Fechamento"] <= preco_entrada - alvo:
+                        # Alvo atingido
                         resultado_dia += alvo * 0.2 * 5
                         resultados.append({"Candle": row["Data"], "Resultado": resultado_dia})
-                        break  # Encerrar posição ao atingir o alvo
+                        break  # Encerrar o dia ao atingir o alvo
                     elif row["Fechamento"] >= preco_entrada + stop:
                         # Inverter posição (stop 1)
                         stop_count += 1
@@ -110,19 +112,6 @@ print(resultados_multiplos_dias)
 # Acumulando os resultados ao longo do tempo
 resultados_multiplos_dias['Resultado_Acumulado'] = resultados_multiplos_dias['Resultado'].cumsum()
 
-# Gerar gráfico de montanha (gráfico de área)
-plt.figure(figsize=(10, 6))
-plt.fill_between(resultados_multiplos_dias['Candle'], 
-                 resultados_multiplos_dias['Resultado_Acumulado'], 
-                 color='skyblue', alpha=0.4)
-plt.plot(resultados_multiplos_dias['Candle'], resultados_multiplos_dias['Resultado_Acumulado'], color='Slateblue', alpha=0.6)
+# Salvar resultados em um arquivo Excel
+resultados_multiplos_dias.to_excel('data/resultado.xlsx', index=False)
 
-plt.title('Evolução Acumulada dos Resultados ao Longo do Tempo', fontsize=14)
-plt.xlabel('Tempo (Candle)', fontsize=12)
-plt.ylabel('Resultado Acumulado', fontsize=12)
-plt.xticks(rotation=45)
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-resultados_multiplos_dias.to_excel('data/resultado.xlsx')
